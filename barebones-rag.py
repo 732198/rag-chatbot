@@ -9,7 +9,6 @@ from llama_index.llms.google_genai import GoogleGenAI
 
 load_dotenv()
 
-# Constants
 DATA_DIR = Path("data")
 
 
