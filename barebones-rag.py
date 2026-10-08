@@ -33,7 +33,6 @@ def validate_data_dir(data_dir: Path):
         )
         st.stop()
 
-    # Filter out hidden files like .DS_Store
     valid_files = [f for f in data_dir.iterdir() if f.is_file() and not f.name.startswith(".")]
     if not valid_files:
         st.error(
@@ -46,42 +45,33 @@ def validate_data_dir(data_dir: Path):
 @st.cache_resource
 def get_query_engine(api_key: str):
     """Load settings, parse documents, build the index, and return the query engine."""
-    # Pass validated API key directly to GoogleGenAI
     Settings.llm = GoogleGenAI(model="gemini-2.5-flash", api_key=api_key)
     Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
-    # Load documents using DATA_DIR constant
     documents = SimpleDirectoryReader(str(DATA_DIR)).load_data()
     
-    # VectorStoreIndex.from_documents splits into chunks before embedding
     index = VectorStoreIndex.from_documents(documents, show_progress=True)
     return index.as_query_engine()
 
 
-# --- Streamlit Layout & Logic ---
 
 st.title("Babson Handbook Chatbot")
 
-# 1. Fail-fast validation checks before calling cached function
 api_key = get_api_key()
 validate_data_dir(DATA_DIR)
 
-# 2. Safely initialize query engine with try-except
 try:
     query_engine = get_query_engine(api_key)
 except Exception as e:
     st.error(f"ENGINE INITIALIZATION FAILED: Unable to build index from documents. Details: {e}")
     st.stop()
 
-# 3. Chat Session State Initialization
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Render chat history
 for message in st.session_state.messages:
     st.chat_message(message["role"]).write(message["content"])
 
-# Handle user query input
 prompt = st.chat_input("Ask about the handbook")
 if prompt:
     st.chat_message("user").write(prompt)
